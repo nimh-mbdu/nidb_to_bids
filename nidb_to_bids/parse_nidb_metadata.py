@@ -9,12 +9,8 @@ import json
 import nibabel as nb
 import click
 
-dump_path = Path('/EDB/MBDU/bids/edb')
-pattern = '*.json'
-out_path = '../data/data_all_col.csv'
-
 def get_dims(img_path):
-    img_shape = nb.load(ngp.as_posix()).shape
+    img_shape = nb.load(img_path.as_posix()).shape
     if len(img_shape) == 3:
         img_shape = list(img_shape) + [1]
     return img_shape
@@ -55,11 +51,11 @@ def test_gzip_if_needed():
 
 test_gzip_if_needed()
 
-# @click.command()
-# @click.option('--dump_path', 
-#               help="Path to the root of the directories that NiDB data has been dumped to.")
-# @click.option('--out_path', 
-#               help="Path to write parsed metadata to.")
+@click.command()
+@click.option('--dump_path', 
+              help="Path to the root of the directories that NiDB data has been dumped to.")
+@click.option('--out_path', 
+              help="Path to write parsed metadata to.")
 def extract_nidb_metadata(dump_path, out_path):
     if ~isinstance(dump_path, Path):
         dump_path = Path(dump_path)
@@ -86,6 +82,7 @@ def extract_nidb_metadata(dump_path, out_path):
             print(i, end=', ', flush=True)
     df_data.to_csv(out_path)
 
-extract_nidb_metadata(dump_path, out_path= '/tmp/test.csv')
+if __name__ == '__main__':
+    extract_nidb_metadata()
 
 
