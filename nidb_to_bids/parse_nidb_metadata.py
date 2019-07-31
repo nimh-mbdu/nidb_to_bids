@@ -57,6 +57,7 @@ test_gzip_if_needed()
 @click.option('--out_path', 
               help="Path to write parsed metadata to.")
 def extract_nidb_metadata(dump_path, out_path):
+    """Read data from all the bids-esque jsons produced by NiDB nifti + json sidecar export option and grab scan dimensions from the scans themselves, then write all the collected metadata to a csv at the specified location."""
     if ~isinstance(dump_path, Path):
         dump_path = Path(dump_path)
     if ~isinstance(out_path, Path):

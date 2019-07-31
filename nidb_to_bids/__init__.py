@@ -1,1 +1,1 @@
-import .parse_nidb_metadata
+from .parse_nidb_metadata import *
