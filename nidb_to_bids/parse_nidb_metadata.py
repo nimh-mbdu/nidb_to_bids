@@ -8,12 +8,14 @@ from pandas.io.json import json_normalize
 import json
 import nibabel as nb
 import click
+from joblib import Parallel, delayed
 
 def get_dims(img_path):
     img_shape = nb.load(img_path.as_posix()).shape
     if len(img_shape) == 3:
         img_shape = list(img_shape) + [1]
     return img_shape
+
 
 def load_json_data(jp):
     filename = jp.parts[-1]
@@ -29,6 +31,7 @@ def load_json_data(jp):
     tmpdf['sesn'] = filename.split('_')[1]
     return tmpdf
 
+
 def gzip_if_needed(jp):
     ngp = Path(jp.as_posix().replace('.json', '.nii.gz'))
     nip = Path(jp.as_posix().replace('.json', '.nii'))
@@ -37,7 +40,9 @@ def gzip_if_needed(jp):
         run(['gzip', nip], cwd=nip.parent, check=True)
     return ngp
 
+
 def test_gzip_if_needed():
+    print("FOOBAR", flush=True)
     test_json = Path('/tmp/test.json')
     test_img = Path('/tmp/test.nii')
     test_ngp = Path('/tmp/test.nii.gz')
@@ -49,14 +54,23 @@ def test_gzip_if_needed():
     assert ~test_img.exists()
     res_ngp.unlink()
 
-test_gzip_if_needed()
+
+def extract_nidb_metadata(jp):
+    tmpdf = load_json_data(jp)
+    ngp = gzip_if_needed(jp)
+    tmpdf['ni'], tmpdf['nj'], tmpdf['nk'], tmpdf['nv'] = get_dims(ngp)
+    return tmpdf
+
 
 @click.command()
 @click.option('--dump_path', 
               help="Path to the root of the directories that NiDB data has been dumped to.")
 @click.option('--out_path', 
               help="Path to write parsed metadata to.")
-def extract_nidb_metadata(dump_path, out_path):
+@click.option('--n_jobs',
+              default=1,
+              help="Number of parallel processes to use to parse NiDB data. Default is 1 job.")
+def parse_nidb_metadata(dump_path, out_path, n_jobs):
     """Read data from all the bids-esque jsons produced by NiDB nifti + json sidecar export option and grab scan dimensions from the scans themselves, then write all the collected metadata to a csv at the specified location."""
     if ~isinstance(dump_path, Path):
         dump_path = Path(dump_path)
@@ -71,16 +85,11 @@ def extract_nidb_metadata(dump_path, out_path):
     
     df_data= pd.DataFrame([])
     i = 0
-    click.echo("JSONs parsed:")
-    for jp in dump_path.glob('**/*.json'):
-        tmpdf = load_json_data(jp)
-        ngp = gzip_if_needed(jp)
-        tmpdf['ni'], tmpdf['nj'], tmpdf['nk'], tmpdf['nv'] = get_dims(ngp)
-        df_data=df_data.append(tmpdf,sort=True)
-        i += 1
-        
-        if i % 1000 == 0:
-            print(i, end=', ', flush=True)
+    click.echo("Starting parse jobs")
+    res = (Parallel(n_jobs=n_jobs, verbose=9)
+           (delayed(extract_nidb_metadata)(jp) for jp in dump_path.glob('**/*.json')))
+    click.echo("Concatenating results, this is slow.")
+    df_data = pd.concat(res, ignore_index=True, sort=True)
     df_data.to_csv(out_path)
 
 if __name__ == '__main__':

@@ -12,17 +12,18 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/nimh-mbdu/nidb_to_bids",
-    #packages=setuptools.find_packages(),
-    packages=['nidb_to_bids'],
+    packages=setuptools.find_packages(),
+    #packages=['nidb_to_bids'],
     install_requires=[
         'pandas',
         'numpy',
         'nibabel',
-        'Click'
+        'Click',
+        'joblib'
     ],
     entry_points='''
         [console_scripts]
-        parse_nidb_metadata=nidb_to_bids.parse_nidb_metadata:extract_nidb_metadata
+        parse_nidb_metadata=nidb_to_bids.parse_nidb_metadata:parse_nidb_metadata
     ''',
     classifiers=[
         "Programming Language :: Python :: 3",
